@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Run script automatically",
+  "description": "Runs a script on www.example.com automatically when user installs the extension",
+  "version": "1.0",
+  "icons": {
+    "32": "search_icon_32.png",
+    "48": "search_icon_48.png",
+    "128": "search_icon_128.png"
+  },
+  "content_scripts": [
+    {
+      "js": [
+        "popup.js"
+      ],
+      "matches": [
+        "http://reshenie-soft.ru:88/books/dokumenty-lis/chapter/integraciia-resebnik*"
+      ]
+    }
+  ]
+}
