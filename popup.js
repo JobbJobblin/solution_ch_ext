@@ -1,9 +1,27 @@
 class Good_detective {
     constructor() {
-        this.initUI();
         this.cache = new Map(); // Кеш: URL → { timestamp, data }
-        this.CACHE_TTL = 300000; // 5 минут (в мс)
+        this.CACHE_TTL = 900000; // 15 минут (в мс)
+        this.pendingCache = new Set(); // URL, которые уже в процессе кэширования
+        this.contentSelector = '#main-content > main > div.page-content.clearfix'; //Селектор для куска страницы с контентом
+
+        this.caching_starter();
+        this.initUI();
         this.init_progress_bar();
+    }
+
+    async caching_starter() {
+        const links = this.collect_all_links();
+        if (links.length === 0) return;
+
+        console.log(`Фоновая загрузка ${links.length} страниц...`);
+
+        // Кэшируем без блокировки интерфейса
+        setTimeout(async () => {
+            for (const url of links) {
+                await this.cachePage(url);
+            }
+        }, 0);
     }
 
     initUI() {
@@ -38,18 +56,34 @@ class Good_detective {
         this.add_styles();
     }
 
+    async cachePage(url) {
+        if (this.cache.has(url) || this.pendingCache.has(url)) return;
+        this.pendingCache.add(url);
+
+        try {
+            const response = await fetch(url);
+            const html = await response.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const contentBlock = doc.querySelector(this.contentSelector);
+
+            if (contentBlock) {
+                this.cache.set(url, {
+                    timestamp: Date.now(),
+                    contentHtml: contentBlock.innerHTML // Сохраняем только HTML блока
+                });
+                console.debug(`Кэширован блок страницы: ${url}`);
+            }
+        } catch (error) {
+            console.error(`Ошибка кэширования ${url}:`, error);
+        } finally {
+            this.pendingCache.delete(url);
+        }
+    }
+
     init_progress_bar() {
         this.progressContainer = document.createElement('div');
-        this.progressContainer.style.cssText = `
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: white;
-      padding: 10px;
-      border: 1px solid #ccc;
-      z-index: 1000;
-    `;
-        document.body.appendChild(this.progressContainer);
+        this.progressContainer.className = 'progress-container';
+        document.querySelector('.search_container').appendChild(this.progressContainer);
     }
 
     update_progress(current, total) {
@@ -65,8 +99,7 @@ class Good_detective {
         style.textContent = `
         
         .search_container {
-          margin-left: auto;
-          margin-right: 0em;
+          margin-left: 2%;
           padding: 10px;
           background: #f5f5f5;
           border-radius: 8px;
@@ -94,44 +127,113 @@ class Good_detective {
         
         #Barrister {
           margin-top: 20px;
+          min-height: 150px;
+          max-height: 350px;
+          overflow-y: auto;
+          overflow-x: auto;
         }
         
-        .result_item {
-          padding: 10px;
-          margin: 5px 0;
-          background: white;
-          border-radius: 4px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        .results-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 15px;
+          margin-top: 20px;
+        }
+        
+        .result-item {
+          padding: 15px;
+          border: 1px solid #eee;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s;
         }
         
         .match {
           background-color: yellow;
-          font-weight: bold;
-        }
-        
-        .page_url {
-          color: #666;
-          font-size: 0.9em;
-          margin-bottom: 5px;
-        }
-        
-        .highlight_scroll {
-            animation: highlight-fade 2s ease;
-        }
-        
-        @keyframes highlight-fade {
-            0% { background-color: yellow; }
-            100% { background-color: transparent; }
-        }
-        
-        .result_item {
-            cursor: pointer;
-            transition: background-color 0.2s;
         }
         
         .result_item:hover {
-            background-color: #3ab3a3;
+          background: #f9f9f9;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+        
+        .external-link {
+          color: #0066cc;
+          font-weight: bold;
+        }
+            
+        .current-page {
+          color: #666;
+        }
+        
+        @keyframes fadeOutHighlight {
+          0% {
+            background-color: yellow;
+          }
+          100% {
+            background-color: transparent;
+          } 
+        }
+        
+        .highlight {
+          background-color: yellow;
+          font-weight: normal !important;
+          padding: 2px 4px;
+          border-radius: 3px;
+          animation: fadeOutHighlight 0.5s ease-out 2.5s forwards; /* Задержка 2.5s, длительность 0.5s */
+        }
+        
+        .progress-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 8px;
+          background: white;
+          border-radius: 4px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          min-width: 120px;
+        }
+        
+        .result-popup {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 80%;
+          max-width: 800px;
+          max-height: 80vh;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+          z-index: 1000;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+            
+        .popup-header {
+          padding: 15px;
+          background: #f5f5f5;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #ddd;
+        }
+            
+        .popup-content {
+          padding: 20px;
+          overflow-y: auto;
+          flex-grow: 1;
+        }
+            
+        .close-popup {
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: #666;
+        }
+            
         `;
 
         document.head.appendChild(style);
@@ -139,7 +241,7 @@ class Good_detective {
 
     async search_starter() {
         const query = document.getElementById('search_input').value.trim().toLowerCase(); //Убираем чувствительность к регистру
-        if(!query) {
+        if (!query) {
             this.show_message('Пустой запрос');
             return;
         }
@@ -177,9 +279,9 @@ class Good_detective {
 
             //Фильтр лишних ссылок. Возможно, он не нужен
             if (href &&
-            !href.startsWith('javascript:') &&
-            !href.startsWith('mailto:') &&
-            href !== window.location.href) {
+                !href.startsWith('javascript:') &&
+                !href.startsWith('mailto:') &&
+                href !== window.location.href) {
                 links.add(href)
             }
         });
@@ -195,15 +297,19 @@ class Good_detective {
         const entity_list = document.querySelector("#main-content > main > div.chapter-content > div")
 
         //Поиск по тексту в заголовках и в теле
-        entity_list.querySelectorAll("a > div > h4 /*селектор заголовка*/, a > div > div > p/*селектор тела*/" ).forEach(link => {
+        entity_list.querySelectorAll("a > div > h4 /*селектор заголовка*/, a > div > div > p/*селектор тела*/").forEach(link => {
             const text = link.textContent.toLowerCase(); //Убираем чувствительность к регистру
+            const parentLink = link.closest('a');
+            const href = parentLink ? parentLink.href : null;
+
             if (text.includes(query)) {
-                console.log(text)
+                //console.log(text)
+                console.log(link);
                 results.push({
                     pageUrl: window.location.href,
                     element: link,
                     text: text,
-                    href: link.href,
+                    href: href,
                     isExternal: false
                 })
             }
@@ -213,139 +319,96 @@ class Good_detective {
     }
 
     // 3. Поиск по внешним страницам
-    /*async search_external_pages(urls, query) {
+    async search_external_pages(urls, query) {
         const results = [];
+        let completed = 0;
+        this.update_progress(completed, urls.length);
 
+        // Обрабатываем каждую страницу
         for (const url of urls) {
             try {
-                const response = await fetch(url);
+                let contentHtml;
+                const cached = this.cache.get(url);
 
-                if (!response.ok) continue;
+                // 1. Пытаемся взять данные из кэша
+                if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+                    contentHtml = cached.contentHtml;
+                    console.log(`Данные для ${url} взяты из кэша`);
+                }
+                // 2. Если в кэше нет или устарело — грузим напрямую
+                else {
+                    console.log(`Загружаем ${url} напрямую...`);
+                    const response = await fetch(url);
+                    const html = await response.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const contentBlock = doc.querySelector(this.contentSelector);
 
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html')
+                    if (!contentBlock) continue;
 
-                doc.querySelectorAll("#main-content > main > div.page-content.clearfix > div").forEach(link => {
-                    const text = link.textContent;
-                    if (text.includes(query)) {
+                    contentHtml = contentBlock.innerHTML;
+                    // Сохраняем в кэш для будущих запросов
+                    this.cache.set(url, {
+                        timestamp: Date.now(),
+                        contentHtml: contentHtml
+                    });
+                }
+
+                // 3. Ищем совпадения в контенте
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = contentHtml;
+
+                tempDiv.querySelectorAll('div').forEach(div => {
+                    if (div.textContent.toLowerCase().includes(query)) {
                         results.push({
                             pageUrl: url,
-                            element: null, // Нет доступа к элементу внешнего документа
-                            text: text,
-                            href: link.href,
+                            text: this.trim_query(div.textContent, query),
                             isExternal: true
                         });
                     }
                 });
+
             } catch (error) {
-                console.error(`Ошибка при поиске по ${url}:`, error);
+                console.error(`Ошибка при обработке ${url}:`, error);
+            } finally {
+                completed++;
+                this.update_progress(completed, urls.length);
             }
         }
 
         return results;
     }
-    }*/
-    async search_external_pages(urls, query) {
-        const contentSelector = '#main-content > main > div.page-content.clearfix';
-        let completed = 0;
-
-        // Обновляем прогресс (0 загружено)
-        this.update_progress(0, urls.length);
-
-        // Запускаем параллельную загрузку и обработку
-        const results = await Promise.all(
-            urls.map(async url => {
-                try {
-                    // Проверяем кеш
-                    if (this.cache.has(url)) {
-                        const cached = this.cache.get(url);
-                        if (Date.now() - cached.timestamp < this.CACHE_TTL) {
-                            return cached.data; // Возвращаем кешированные данные
-                        }
-                    }
-
-                    // Загрузка с таймаутом
-                    const controller = new AbortController();
-                    const timeout = setTimeout(() => controller.abort(), 10000); // 10 сек таймаут
-
-                    const response = await fetch(url, {
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeout);
-
-                    const html = await response.text();
-                    const doc = new DOMParser().parseFromString(html, 'text/html');
-
-                    // Ищем только в целевом блоке
-                    const contentBlock = doc.querySelector(contentSelector);
-                    if (!contentBlock) return [];
-
-                    // Поиск ссылок в блоке + ограничение текста
-                    const pageResults = [];
-                    contentBlock.querySelectorAll('div').forEach(link => {
-                        if (link.textContent.toLowerCase().includes(query)) {
-                            pageResults.push({
-                                pageUrl: url,
-                                text: this.trim_query(link.textContent, query), // Обрезаем текст
-                                href: link.href,
-                                isExternal: true
-                            });
-                        }
-                    });
-
-                    // Обновляем прогресс
-                    completed++;
-                    this.update_progress(completed, urls.length);
-
-                    // Сохраняем в кеш
-                    this.cache.set(url, {
-                        timestamp: Date.now(),
-                        data: pageResults
-                    });
-
-                    return pageResults;
-                } catch (error) {
-                    completed++;
-                    this.update_progress(completed, urls.length);
-                    console.error(`Ошибка при обработке ${url}:`, error);
-                    return [];
-                }
-            })
-        );
-        console.log(results.flat())
-        return results.flat(); // Преобразуем массив массивов в один массив
-    }
-
 
     // 5. Отображение результатов
     display_results(results, query) {
-        const results_container = document.getElementById('Barrister')
+        const results_container = document.getElementById('Barrister');
 
         if (results.length === 0) {
-            results_container.innerHTML = '<p>Расследование не принесло результатов.</p>';
+            results_container.innerHTML = '<p>Ты первый, кто задал такой запрос. Удачи тебе с твоей увлекательнейшей задачей!</p>';
             return;
         }
 
-        let html = `<h3>Найдено ${results.length} совпадения:</h3>`;
+        let html = `<h3>Найдено ${results.length} совпадений:</h3><div class="results-grid">`;
 
         results.forEach((result, index) => {
             const highlighted_text = this.highlight_matches(result.text, query);
 
             html += `
-            <div class="result_item" data-index="${index}">
-                <div class="page_url">${result.isExternal ? 'Внешняя страница: ' : 'Текущая страница: '}
-                  <a href="${result.pageUrl}" target="_blank">${result.pageUrl}</a>
+                <div class="result-item" data-index="${index}">
+                    <div class="result-source">
+                        ${result.isExternal ?
+                `<span class="external-link">Внешняя страница</span>` :
+                `<span class="current-page">Текущая страница</span>`}
+                    </div>
+                    <div class="result-content">${highlighted_text}</div>
                 </div>
-                ${result.href ? `<div>Ссылка: <a href="${result.href}" target="_blank">${result.href}</a></div>` : ''}
-                <div class="search_result_text">${highlighted_text}</div>
-            </div>
-        `;
+            `;
         });
+
+        html += `</div>`;
 
         results_container.innerHTML = html;
 
-        this.scroll_on_click_handler(results);
+        this.setup_result_handlers(results);
     }
 
     //Вспомогательные функции. Как же их много.
@@ -377,23 +440,42 @@ class Good_detective {
         return text.replace(regex, match => `<span class="match">${match}</span>`);
     }
 
-    //Вспомогательная функция для прокрутки до найденного результата
-    scroll_on_click_handler(results) {
-        document.querySelectorAll('.result_item').forEach((item, index) => {
+    //Распределитель на вызов внешних или внутренних обработчиков результатов
+    setup_result_handlers(results) {
+        document.querySelectorAll('.result-item').forEach((item, index) => {
             item.addEventListener('click', () => {
                 const result = results[index];
+                if (!result) return;
 
-                // Если результат с текущей страницы и есть DOM-элемент
-                if (!result.isExternal && result.element) {
-                    // Плавная прокрутка к элементу
-                    result.element.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center'
-                    })
+                if (result.isExternal) {
+                    this.show_external_result_popup(result);
                 } else {
-                    window.open(result.pageUrl);
+                    this.scroll_to_local_result(result);
                 }
             });
+        });
+    }
+
+    //Вспомогательная функция по pop-up окнам
+    show_external_result_popup(result) {
+        //Мне пока надоело, поэтому тут будет временно открытие в новой вкладке, а не попап. Там чот сложное...
+        window.open(result.pageUrl)
+    }
+    //Вспомогательная функция для прокрутки до найденного результата или открытия страницы
+    scroll_to_local_result(result) {
+        if (!result.element) return;
+
+        // Подсветка
+        const originalHtml = result.element.innerHTML;
+        result.element.innerHTML = originalHtml.replace(
+            new RegExp(result.text, 'gi'),
+            match => `<span class="highlight">${match}</span>`
+        );
+
+        // Прокрутка
+        result.element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
         });
     }
 
@@ -402,4 +484,5 @@ class Good_detective {
         document.getElementById('Barrister').innerHTML = `<p>${message}</p>`;
     }
 }
+
 new Good_detective();
