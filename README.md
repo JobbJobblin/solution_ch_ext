@@ -1,4 +1,5 @@
-Solution Chrome Extension 🚀
+#Solution Chrome Extension 🚀
+
 solution_ch_ext — это браузерное расширение для chromium браузеров (chrome, opera ...), которое добавляет поиск по разделу [решебник](http://reshenie-soft.ru:88/books/dokumenty-lis/chapter/integraciia-resebnik).
 
 ## 🔹 Установка
