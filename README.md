@@ -5,7 +5,9 @@ solution_ch_ext — это браузерное расширение для chro
 ## 🔹 Установка
 Скачайте репозиторий:
 
-[ZIP](github.com/JobbJobblin/solution_ch_ext/archive/refs/heads/master.zip)
+[ZIP](https://github.com/JobbJobblin/solution_ch_ext/archive/refs/heads/master.zip)
+
+или
 
 ```bash
 git clone https://github.com/JobbJobblin/solution_ch_ext.git
