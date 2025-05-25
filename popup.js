@@ -9,51 +9,18 @@ class Good_detective {
         this.initUI();
         this.init_progress_bar();
     }
-
+    // Функции кэша
     async caching_starter() {
         const links = this.collect_all_links();
         if (links.length === 0) return;
+        var currentdate = new Date();
+        //console.log(`Фоновая загрузка ${links.length} страниц... (${currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds()})`);
 
-        console.log(`Фоновая загрузка ${links.length} страниц...`);
+        const promises = links.map(link => this.cachePage(link))
+        const Cache_res = await Promise.allSettled(promises)
+        var currentdate = new Date();
+        //console.log(`Загрузка завершена (${currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds()})`)
 
-        // Кэшируем без блокировки интерфейса
-        setTimeout(async () => {
-            for (const url of links) {
-                await this.cachePage(url);
-            }
-        }, 0);
-    }
-
-    initUI() {
-        const container = document.createElement("div");
-        container.className = 'search_container';
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.id = 'search_input';
-        input.placeholder = 'Найдётся далеко не всё, и совсем не сразу...';
-        //Для отправки по enter
-        input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                this.search_starter(); // Вызываем поиск при нажатии Enter
-            }
-        });
-
-        const tap_to_investigate = document.createElement('tap_to_investigate');
-        tap_to_investigate.textContent = 'Поиск';
-        tap_to_investigate.addEventListener('click', () => this.search_starter());
-
-        const results_div = document.createElement('div');
-        results_div.id = 'Barrister';
-
-        container.appendChild(input);
-        container.appendChild(tap_to_investigate);
-        container.appendChild(results_div);
-
-        const insertion = document.querySelector('#content')
-        document.body.insertBefore(container, insertion);
-
-        this.add_styles();
     }
 
     async cachePage(url) {
@@ -80,6 +47,41 @@ class Good_detective {
         }
     }
 
+    //Конструктор
+    initUI() {
+        const container = document.createElement("div");
+        container.className = 'search_container';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'search_input';
+        input.placeholder = 'Найдётся далеко не всё, и совсем не сразу...';
+        //Для отправки по enter
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                this.search_starter(); // Вызываем поиск при нажатии Enter
+            }
+        });
+
+        const tap_to_investigate = document.createElement('tap_to_investigate');
+        tap_to_investigate.id = 'tap_to_investigate_id'
+        tap_to_investigate.textContent = 'Поиск';
+        tap_to_investigate.addEventListener('click', () => this.search_starter());
+
+        const results_div = document.createElement('div');
+        results_div.id = 'Barrister';
+
+        container.appendChild(input);
+        container.appendChild(tap_to_investigate);
+        container.appendChild(results_div);
+
+        const insertion = document.querySelector('#content')
+        document.body.insertBefore(container, insertion);
+
+        //this.add_styles();
+    }
+
+    // Функции строки загрузки
     init_progress_bar() {
         this.progressContainer = document.createElement('div');
         this.progressContainer.className = 'progress-container';
@@ -93,155 +95,98 @@ class Good_detective {
     `;
     }
 
-    add_styles() {
-        const style = document.createElement('style');
+    // Функция popup
+    async pop_create(url) {
+        // Создаем элементы popup
+        const pop_overlay = document.createElement('div');
+        pop_overlay.className = 'pop_overlay';
+        pop_overlay.style.display = 'none';
 
-        style.textContent = `
-        
-        .search_container {
-          margin-left: 2%;
-          padding: 10px;
-          background: #f5f5f5;
-          border-radius: 8px;
-          box-shadow: 0 2px 4px rgba (0,0,0,0.1);
-        }
-        
-        #search_input {
-          padding: 8px;
-          width: 300px;
-          margin-right: 10px;
-        }
-        
-        tap_to_investigate {
-          padding: 8px 16px;
-          background: #43afc0;
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-        }
-        
-        tap_to_investigate:hover {
-          background: #3ab3a3;
-        }
-        
-        #Barrister {
-          margin-top: 20px;
-          min-height: 150px;
-          max-height: 350px;
-          overflow-y: auto;
-          overflow-x: auto;
-        }
-        
-        .results-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-          gap: 15px;
-          margin-top: 20px;
-        }
-        
-        .result-item {
-          padding: 15px;
-          border: 1px solid #eee;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        
-        .match {
-          background-color: yellow;
-        }
-        
-        .result_item:hover {
-          background: #f9f9f9;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .external-link {
-          color: #0066cc;
-          font-weight: bold;
-        }
-            
-        .current-page {
-          color: #666;
-        }
-        
-        @keyframes fadeOutHighlight {
-          0% {
-            background-color: yellow;
-          }
-          100% {
-            background-color: transparent;
-          } 
-        }
-        
-        .highlight {
-          background-color: yellow;
-          font-weight: normal !important;
-          padding: 2px 4px;
-          border-radius: 3px;
-          animation: fadeOutHighlight 0.5s ease-out 2.5s forwards; /* Задержка 2.5s, длительность 0.5s */
-        }
-        
-        .progress-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 8px;
-          background: white;
-          border-radius: 4px;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          min-width: 120px;
-        }
-        
-        .result-popup {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 80%;
-          max-width: 800px;
-          max-height: 80vh;
-          background: white;
-          border-radius: 8px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-          z-index: 1000;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-        }
-            
-        .popup-header {
-          padding: 15px;
-          background: #f5f5f5;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid #ddd;
-        }
-            
-        .popup-content {
-          padding: 20px;
-          overflow-y: auto;
-          flex-grow: 1;
-        }
-            
-        .close-popup {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #666;
-        }
-            
-        `;
+        const pop_content = document.createElement('div');
+        pop_content.className = 'pop_content';
 
-        document.head.appendChild(style);
+        const pop_closeBtn = document.createElement('button');
+        pop_closeBtn.className = 'pop_close_btn';
+        pop_closeBtn.innerHTML = '×';
+        pop_closeBtn.addEventListener('click', () => pop_overlay.style.display = 'none');
+
+        const pop_body = document.createElement('div');
+        pop_body.id = 'pop_body';
+        pop_body.className = 'pop_loading';
+        pop_body.textContent = 'Загрузка...';
+
+        // Собираем структуру
+        pop_content.appendChild(pop_closeBtn);
+        pop_content.appendChild(pop_body);
+        pop_overlay.appendChild(pop_content);
+        document.body.appendChild(pop_overlay);
+
+        // Оповещение об инициализации загрузки
+        pop_body.innerHTML = '<div class="loading">Загрузка...</div>';
+        pop_overlay.style.display = 'flex';
+
+        let contentHtml;
+        const chech = this.cache.get(url);
+        // 1. Пытаемся взять данные из кэша
+        if (chech && (Date.now() - chech.timestamp < this.CACHE_TTL)) {
+            contentHtml = chech.contentHtml;
+            pop_body.innerHTML = contentHtml;
+        }
+        else {
+            const response = await fetch(url);
+            const html = await response.text();
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const contentBlock = doc.querySelector(this.contentSelector);
+
+            contentHtml = contentBlock.innerHTML;
+            pop_body.innerHTML = contentHtml;
+            // Сохраняем в кэш для будущих запросов
+            this.cache.set(url, {
+                timestamp: Date.now(),
+                contentHtml: contentHtml
+            });
+        }
+        /*
+        // Загружаем содержимое целиком
+        fetch(url)
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки');
+                return response.text();
+            })
+            .then(html => {
+                pop_body.innerHTML = html;
+            })
+            .catch(error => {
+                pop_body.innerHTML = `<div class="error">Ошибка: ${error.message}</div>`;
+            });
+        */
+
+        pop_overlay.onclick = function(e) {
+            if (e.target === pop_overlay) pop_overlay.style.display = 'none';
+        };
+
     }
 
+    // Стили
+   /* add_styles() {
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'additional_styles.css';
+        //const style = document.createElement('style');
+
+        //style.textContent = ``;
+
+        document.head.appendChild(link);
+    }*/
+
+    // Общая функция для запуска поиска
     async search_starter() {
-        const query = document.getElementById('search_input').value.trim().toLowerCase(); //Убираем чувствительность к регистру
-        if (!query) {
+
+        //Убираем чувствительность к регистру, ё на е, делим по словам, убираем пробелы
+        const trimmed_query = document.getElementById('search_input').value.trim().toLowerCase().replace(/ё/g, 'е').split(/\s+/);
+        //console.log(`${trimmed_query}`);
+        if (!trimmed_query) {
             this.show_message('Пустой запрос');
             return;
         }
@@ -253,16 +198,16 @@ class Good_detective {
             const links = this.collect_all_links();
 
             // 2. Поиск на текущей странице
-            const current_page_results = this.search_current_page(query);
+            const current_page_results = this.search_current_page(trimmed_query);
 
             // 3. Поиск по внешним страницам
-            const external_results = await this.search_external_pages(links, query);
+            const external_results = await this.search_external_pages(links, trimmed_query);
 
             // 4. Объединение результатов
             const all_results = [...current_page_results, ...external_results];
 
             // 5. Отображение результатов
-            this.display_results(all_results, query);
+            this.display_results(all_results, trimmed_query);
         } catch (error) {
             console.error('Ошибка при выполнении поиска:', error);
             this.show_message('Произошла ошибка при выполнении поиска');
@@ -298,13 +243,13 @@ class Good_detective {
 
         //Поиск по тексту в заголовках и в теле
         entity_list.querySelectorAll("a > div > h4 /*селектор заголовка*/, a > div > div > p/*селектор тела*/").forEach(link => {
-            const text = link.textContent.toLowerCase(); //Убираем чувствительность к регистру
+            const text = link.textContent.toLowerCase().replace(/ё/g, 'е'); //Убираем чувствительность к регистру, ё на е
             const parentLink = link.closest('a');
             const href = parentLink ? parentLink.href : null;
 
-            if (text.includes(query)) {
-                //console.log(text)
-                console.log(link);
+            // Поиск по части слова. Не по порядку. Можно добавить доп логику, что, если не нашло ничего, то через some вместо every
+            if (query.every(keyword => keyword.length > 0 && text.includes(keyword))) {
+            /*if (text.includes(query)) {*/ //Старый поиск
                 results.push({
                     pageUrl: window.location.href,
                     element: link,
@@ -333,11 +278,11 @@ class Good_detective {
                 // 1. Пытаемся взять данные из кэша
                 if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
                     contentHtml = cached.contentHtml;
-                    console.log(`Данные для ${url} взяты из кэша`);
+                    //console.log(`Данные для ${url} взяты из кэша`);
                 }
                 // 2. Если в кэше нет или устарело — грузим напрямую
                 else {
-                    console.log(`Загружаем ${url} напрямую...`);
+                    //console.log(`Загружаем ${url} напрямую...`);
                     const response = await fetch(url);
                     const html = await response.text();
                     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -358,7 +303,9 @@ class Good_detective {
                 tempDiv.innerHTML = contentHtml;
 
                 tempDiv.querySelectorAll('div').forEach(div => {
-                    if (div.textContent.toLowerCase().includes(query)) {
+                    // Поиск по части слова. Не по порядку. Можно добавить доп логику, что, если не нашло ничего, то через some вместо every
+                    if (query.every(keyword => keyword.length > 0 && div.textContent.toLowerCase().replace(/ё/g, 'е').includes(keyword))) {
+                    //if (div.textContent.toLowerCase().replace(/ё/g, 'е').includes(query)) { // Старый поиск
                         results.push({
                             pageUrl: url,
                             text: this.trim_query(div.textContent, query),
@@ -415,8 +362,10 @@ class Good_detective {
 
     //Вспомогательная функция для обрезки поисковых результатов
     trim_query(text, query, maxLength = 100) {
-        const lowerText = text.toLowerCase();
+
+        const lowerText = text.toLowerCase().replace(/ё/g, 'е');//Меняем ё на е в статьях
         const queryIndex = lowerText.indexOf(query);
+
 
         if (queryIndex === -1) {
             return text.length > maxLength
@@ -448,7 +397,9 @@ class Good_detective {
                 if (!result) return;
 
                 if (result.isExternal) {
-                    this.show_external_result_popup(result);
+                    this.pop_create(result.pageUrl)
+                    // Если не попап, а открытие нового окна
+                    // window.open(result.pageUrl);
                 } else {
                     this.scroll_to_local_result(result);
                 }
@@ -456,11 +407,6 @@ class Good_detective {
         });
     }
 
-    //Вспомогательная функция по pop-up окнам
-    show_external_result_popup(result) {
-        //Мне пока надоело, поэтому тут будет временно открытие в новой вкладке, а не попап. Там чот сложное...
-        window.open(result.pageUrl)
-    }
     //Вспомогательная функция для прокрутки до найденного результата или открытия страницы
     scroll_to_local_result(result) {
         if (!result.element) return;

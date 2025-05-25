@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Run script automatically",
-  "description": "Runs a script on www.example.com automatically when user installs the extension",
+  "name": "Поиск РЕШЕНИЙ",
+  "description": "Поиск решений по решебнику у Решения",
   "version": "1.0",
   "icons": {
     "32": "search_icon_32.png",
@@ -12,6 +12,9 @@
     {
       "js": [
         "popup.js"
+      ],
+      "css": [
+        "additional_styles.css"
       ],
       "matches": [
         "http://reshenie-soft.ru:88/books/dokumenty-lis/chapter/integraciia-resebnik*"

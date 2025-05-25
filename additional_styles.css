@@ -1,0 +1,134 @@
+.search_container {
+    margin-left: 2%;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba (0,0,0,0.1);
+}
+
+#search_input {
+    padding: 8px;
+    width: 300px;
+    margin-right: 10px;
+}
+
+#tap_to_investigate_id {
+    padding: 8px 16px;
+    background: #43afc0;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#tap_to_investigate_id:hover {
+    background: #3ab3a3;
+}
+
+#Barrister {
+    margin-top: 20px;
+    min-height: 150px;
+    max-height: 350px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.result-item {
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.match {
+    background-color: yellow;
+}
+
+.result_item:hover {
+    background: #f9f9f9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.external-link {
+    color: #0066cc;
+    font-weight: bold;
+}
+
+.current-page {
+    color: #666;
+}
+
+@keyframes fadeOutHighlight {
+    0% {
+        background-color: yellow;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.highlight {
+    background-color: yellow;
+    font-weight: normal !important;
+    padding: 2px 4px;
+    border-radius: 3px;
+    animation: fadeOutHighlight 0.5s ease-out 2.5s forwards; /* Задержка 2.5s, длительность 0.5s */
+}
+
+.progress-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 120px;
+}
+
+.pop_overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.pop_content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow: auto;
+    position: relative;
+}
+.pop_close_btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+    font-size: 20px;
+    color: red;
+    background: none;
+    border: none;
+    z-index: 100;
+}
+.pop_loading {
+    color: #666;
+    font-style: italic;
+}
+
