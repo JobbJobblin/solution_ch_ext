@@ -14,7 +14,7 @@
 
 #tap_to_investigate_id {
     padding: 8px 16px;
-    background: #43afc0;
+    background: #3aa6b5;
     color: white;
     border: none;
     border-radius: 4px;
@@ -131,4 +131,22 @@
     color: #666;
     font-style: italic;
 }
+
+.pop_external_link {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #3aa6b5;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background 0.3s;
+    margin: 10px auto 0;
+}
+
+.pop_external_link:hover {
+    background: #2d8695;
+}
+
+
 

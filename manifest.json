@@ -3,10 +3,14 @@
   "name": "Поиск РЕШЕНИЙ",
   "description": "Поиск решений по решебнику у Решения",
   "version": "1.0",
+  "permissions": ["storage"],
   "icons": {
     "32": "search_icon_32.png",
     "48": "search_icon_48.png",
     "128": "search_icon_128.png"
+  },
+  "action": {
+    "default_popup": "menu.html"
   },
   "content_scripts": [
     {

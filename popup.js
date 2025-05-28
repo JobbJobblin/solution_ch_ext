@@ -1,14 +1,32 @@
 class Good_detective {
     constructor() {
+        this.isEnabled = true;
+        this.initMessageListener();
+
         this.cache = new Map(); // Кеш: URL → { timestamp, data }
-        this.CACHE_TTL = 900000; // 15 минут (в мс)
+        this.CACHE_TTL = 3600000; // 60 минут (в мс)
         this.pendingCache = new Set(); // URL, которые уже в процессе кэширования
         this.contentSelector = '#main-content > main > div.page-content.clearfix'; //Селектор для куска страницы с контентом
 
-        this.caching_starter();
         this.initUI();
+
+        this.isCacheReady = false;//флаг кэша
+        this.caching_starter();
         this.init_progress_bar();
+
     }
+
+    // Слушаем тоггл на меню расширения
+    initMessageListener() {
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            if (message.type === "TOGGLE_UPDATE") {
+                this.isEnabled = message.value; // Сохраняем текущее состояние
+                //console.log("Тоггл обновлён:", this.isEnabled);
+            }
+            return true;
+        });
+    }
+
     // Функции кэша
     async caching_starter() {
         const links = this.collect_all_links();
@@ -16,9 +34,25 @@ class Good_detective {
         var currentdate = new Date();
         //console.log(`Фоновая загрузка ${links.length} страниц... (${currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds()})`);
 
+        const button = document.getElementById('tap_to_investigate_id');
+
+        // Меняем стиль на "загрузка" (опционально)
+        button.style.background = '#bd1251';
+        button.textContent = 'Загрузка...';
+
         const promises = links.map(link => this.cachePage(link))
         const Cache_res = await Promise.allSettled(promises)
         var currentdate = new Date();
+        this.isCacheReady = true;
+
+        button.classList.add('ready');
+        button.style.background = '#3aa6b5';
+        button.textContent = 'Поиск';
+
+        // Разблокируем кнопку
+        button.disabled = false;
+
+
         //console.log(`Загрузка завершена (${currentdate.getHours() + ":" + currentdate.getMinutes() + ":" + currentdate.getSeconds()})`)
 
     }
@@ -58,7 +92,7 @@ class Good_detective {
         input.placeholder = 'Найдётся далеко не всё, и совсем не сразу...';
         //Для отправки по enter
         input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && this.isCacheReady) {
                 this.search_starter(); // Вызываем поиск при нажатии Enter
             }
         });
@@ -66,7 +100,11 @@ class Good_detective {
         const tap_to_investigate = document.createElement('tap_to_investigate');
         tap_to_investigate.id = 'tap_to_investigate_id'
         tap_to_investigate.textContent = 'Поиск';
-        tap_to_investigate.addEventListener('click', () => this.search_starter());
+        tap_to_investigate.addEventListener('click', () => {
+            if (this.isCacheReady) {
+                this.search_starter();
+            }
+        });
 
         const results_div = document.createElement('div');
         results_div.id = 'Barrister';
@@ -110,12 +148,20 @@ class Good_detective {
         pop_closeBtn.innerHTML = '×';
         pop_closeBtn.addEventListener('click', () => pop_overlay.style.display = 'none');
 
+        const externalLinkBtn = document.createElement('a');
+        externalLinkBtn.className = 'pop_external_link';
+        externalLinkBtn.href = url;
+        externalLinkBtn.target = '_blank'; // Открывать в новой вкладке
+        externalLinkBtn.textContent = 'Открыть в новом окне';
+        externalLinkBtn.style.marginTop = '10px';
+
         const pop_body = document.createElement('div');
         pop_body.id = 'pop_body';
         pop_body.className = 'pop_loading';
         pop_body.textContent = 'Загрузка...';
 
         // Собираем структуру
+        pop_content.appendChild(externalLinkBtn);
         pop_content.appendChild(pop_closeBtn);
         pop_content.appendChild(pop_body);
         pop_overlay.appendChild(pop_content);
@@ -146,20 +192,7 @@ class Good_detective {
                 contentHtml: contentHtml
             });
         }
-        /*
-        // Загружаем содержимое целиком
-        fetch(url)
-            .then(response => {
-                if (!response.ok) throw new Error('Ошибка загрузки');
-                return response.text();
-            })
-            .then(html => {
-                pop_body.innerHTML = html;
-            })
-            .catch(error => {
-                pop_body.innerHTML = `<div class="error">Ошибка: ${error.message}</div>`;
-            });
-        */
+
 
         pop_overlay.onclick = function(e) {
             if (e.target === pop_overlay) pop_overlay.style.display = 'none';
@@ -167,21 +200,12 @@ class Good_detective {
 
     }
 
-    // Стили
-   /* add_styles() {
-
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'additional_styles.css';
-        //const style = document.createElement('style');
-
-        //style.textContent = ``;
-
-        document.head.appendChild(link);
-    }*/
-
     // Общая функция для запуска поиска
     async search_starter() {
+
+        if (!this.isCacheReady) {
+            alert('')
+        }
 
         //Убираем чувствительность к регистру, ё на е, делим по словам, убираем пробелы
         const trimmed_query = document.getElementById('search_input').value.trim().toLowerCase().replace(/ё/g, 'е').split(/\s+/);
@@ -305,7 +329,7 @@ class Good_detective {
                 tempDiv.querySelectorAll('div').forEach(div => {
                     // Поиск по части слова. Не по порядку. Можно добавить доп логику, что, если не нашло ничего, то через some вместо every
                     if (query.every(keyword => keyword.length > 0 && div.textContent.toLowerCase().replace(/ё/g, 'е').includes(keyword))) {
-                    //if (div.textContent.toLowerCase().replace(/ё/g, 'е').includes(query)) { // Старый поиск
+                        //if (div.textContent.toLowerCase().replace(/ё/g, 'е').includes(query)) { // Старый поиск
                         results.push({
                             pageUrl: url,
                             text: this.trim_query(div.textContent, query),
@@ -324,7 +348,6 @@ class Good_detective {
 
         return results;
     }
-
     // 5. Отображение результатов
     display_results(results, query) {
         const results_container = document.getElementById('Barrister');
@@ -395,11 +418,15 @@ class Good_detective {
             item.addEventListener('click', () => {
                 const result = results[index];
                 if (!result) return;
-
+                // Логика тоггла
                 if (result.isExternal) {
-                    this.pop_create(result.pageUrl)
-                    // Если не попап, а открытие нового окна
-                    // window.open(result.pageUrl);
+                    if (!this.isEnabled){
+                        //console.log('1Состояние функции:', this.isEnabled);
+                        window.open(result.pageUrl);
+                    } else {
+                        this.pop_create(result.pageUrl)
+                        //console.log('Состояние функции:', this.isEnabled);
+                    }
                 } else {
                     this.scroll_to_local_result(result);
                 }
